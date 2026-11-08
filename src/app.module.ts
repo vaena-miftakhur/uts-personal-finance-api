@@ -9,6 +9,8 @@ import { AccountsModule } from './accounts/accounts.module.js';
 import { CategoriesModule } from './categories/categories.module.js';
 import { TransactionsModule } from './transactions/transactions.module.js';
 import { BudgetsModule } from './budgets/budgets.module.js';
+import { Users } from './users/entities/users-entity.js';
+import { Accounts } from './accounts/entities/accounts-entity.js';
 
 // membaca file .env
 config();
@@ -22,7 +24,10 @@ config();
       username: process.env.DB_USERNAME,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_DATABASE,
-      entities: [],
+      entities: [
+        Users,
+        Accounts,
+      ],
       synchronize: true,
     }),
     UsersModule,
