@@ -1,15 +1,21 @@
+version: '3.8'
+
 services:
+  # Konfigurasi container database
   postgres-db:
     image: postgres:16-alpine
-    container_name: uts_postgre_container
+    container_name: harkat_postgre_container
     restart: always
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: rahasia
-      POSTGRES_DB: personal_finance_db
+      POSTGRES_PASSWORD: supersecretpassword
+      POSTGRES_DB: harkat_app_library
     ports:
-      - "5433:5432"
+      # Format portDiKomputer:PortDiContainer
+      - "5432:5432"
     volumes:
-      - uts_postgres_data:/var/lib/postgresql/data
+      # Menyimpan database ke hdd
+      - postgre_data_volume:/var/lib/postgresql/data
+
 volumes:
-  uts_postgres_data:
+  postgre_data_volume:

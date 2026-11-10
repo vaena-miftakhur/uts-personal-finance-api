@@ -91,8 +91,8 @@ npm run start:prod
 
 ## Aturan Bisnis
 
-- Transaksi dicatat di satu tabel `transactions` dengan `type` = `income` / `expense`, `amount` selalu positif.
-- Realisasi anggaran dihitung dari transaksi `expense` dengan kategori yang sama dan tanggal di dalam periode budget.
+- Transaksi dicatat di satu tabel `transactions` dengan `type` = `income` / `outcome`, `amount` selalu positif.
+- Realisasi anggaran dihitung dari transaksi `outcome` dengan kategori yang sama dan tanggal di dalam periode budget.
 - Sisa anggaran = `budgets.amount` dikurangi realisasi.
 
 ### POST /users

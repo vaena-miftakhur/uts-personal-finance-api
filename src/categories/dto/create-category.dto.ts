@@ -8,8 +8,8 @@ export class CreateCategoryDto {
 
   @IsNotEmpty({ message: 'Tipe kategori wajib diisi' })
   @IsString({ message: 'Tipe kategori harus berupa teks' })
-  @IsIn(['income', 'expense'], {
-    message: 'Tipe kategori harus berupa "income" atau "expense"',
+  @IsIn(['income', 'outcome'], {
+    message: 'Tipe kategori harus berupa "income" atau "outcome"',
   })
   type: string;
 }
