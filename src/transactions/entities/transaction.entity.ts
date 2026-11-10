@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import type { Accounts } from '../../accounts/entities/accounts-entity.js';
-import type { Category } from '../../categories/entities/category.entity.js';
+import type { Category } from '../../categories/entities/category-entity.js';
 
 @Entity('transactions')
 export class Transaction {
