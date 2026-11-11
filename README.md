@@ -48,18 +48,10 @@ Container PostgreSQL berjalan di port `5433` (host) dan database `personal_finan
 ## 4. Migrasi Database
 
 Generate migration dari entity, lalu jalankan:
+docker compose up -d
 
-```
-npm run build
-npx typeorm migration:generate -d dist/data-source.js src/migrations/InitSchema
-npm run build
-npx typeorm migration:run -d dist/data-source.js
-```
-
-Batalkan migration terakhir (jika perlu):
-
-```
-npx typeorm migration:revert -d dist/data-source.js
+untuk hapus:
+docker compose down -v
 ```
 
 Cek tabel di HeidiSQL/DBeaver (host `localhost`, port `5433`): `users`, `accounts`, `categories`, `transactions`, `budgets`.
