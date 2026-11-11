@@ -1,6 +1,9 @@
+import { config } from 'dotenv';
+config();
+
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { config } from 'dotenv';
+
 
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
@@ -11,9 +14,9 @@ import { TransactionsModule } from './transactions/transactions.module.js';
 import { BudgetsModule } from './budgets/budgets.module.js';
 import { Users } from './users/entities/users-entity.js';
 import { Accounts } from './accounts/entities/accounts-entity.js';
-
-// membaca file .env
-config();
+import { Budget } from './budgets/entities/budget-entity.js';
+import { Transaction } from './transactions/entities/transaction.entity.js';
+import { Category } from './categories/entities/category-entity.js';
 
 @Module({
   imports: [
@@ -27,6 +30,9 @@ config();
       entities: [
         Users,
         Accounts,
+        Budget,
+        Transaction,
+        Category
       ],
       synchronize: true,
     }),

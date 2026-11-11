@@ -7,7 +7,7 @@ export class CreateTransactionDto {
   @IsUUID('all', { message: 'Category ID harus berupa UUID yang valid'})
   categoryId: string;
 
-  @IsIn(['income', 'expense'], { message: 'Tipe transaksi hanya boleh income atau expense'})
+  @IsIn(['income', 'outcome'], { message: 'Tipe transaksi hanya boleh income atau outcome'})
   type: string;
 
   @IsNumber({ maxDecimalPlaces: 2 }, { message: 'Nominal transaksi harus berupa angka dengan maksimal 2 angka desimal' })

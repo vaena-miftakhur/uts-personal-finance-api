@@ -1,4 +1,4 @@
-import { PrimaryGeneratedColumn, Column, Entity, JoinColumn, ManyToOne, OneToMany, CreateDateColumn, UpdateDateColumn } from "typeorm";
+import { PrimaryGeneratedColumn, Column, Entity, JoinColumn, ManyToOne, OneToMany, CreateDateColumn, UpdateDateColumn, DeleteDateColumn } from "typeorm";
 import { Users } from "../../users/entities/users-entity.js";
 import { Category } from "../../categories/entities/category-entity.js";
 
@@ -18,15 +18,18 @@ export class Budget{
     @Column({type: 'decimal', precision:14, scale: 2})
     amount: number;
 
-    @Column({name: 'start_date'})
-    startDate: Date;
+    @Column({ type: 'date', name: 'start_date' })
+    startDate: string;
 
-    @Column({name: 'end_date'})
-    endDate: Date;
+    @Column({ type: 'date', name: 'end_date' })
+    endDate: string;
 
     @CreateDateColumn({name: 'created_at', type: 'timestamp'})
     createdAt: Date;
 
     @UpdateDateColumn({name: 'updated_at', type: 'timestamp'})
     updateAt: Date;
+
+    @DeleteDateColumn({ name: 'deleted_at' })
+    deletedAt: Date;
 }

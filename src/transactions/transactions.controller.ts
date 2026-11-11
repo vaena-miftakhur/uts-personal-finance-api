@@ -16,6 +16,11 @@ export class TransactionsController {
     return this.transactionsService.findAll();
   }
 
+  @Get('summary')
+  summary() {
+    return this.transactionsService.summary();
+  }
+
   // Menampilkan transaksi berdasarkan ID
   @Get(':id')
   findById(@Param('id') id: string) {

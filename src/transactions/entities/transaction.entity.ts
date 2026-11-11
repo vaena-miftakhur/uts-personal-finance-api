@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, DeleteDateColumn } from 'typeorm';
 import type { Accounts } from '../../accounts/entities/accounts-entity.js';
 import type { Category } from '../../categories/entities/category-entity.js';
 
@@ -7,7 +7,7 @@ export class Transaction {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne('Account', { onDelete: 'RESTRICT' })
+  @ManyToOne('Accounts', { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'account_id' })
   accounts: Accounts;
 
@@ -32,4 +32,7 @@ export class Transaction {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @DeleteDateColumn({ name: 'deleted_at' })
+  deletedAt: Date;
 }

@@ -1,180 +1,150 @@
-
-import {
-    Injectable,
-    NotFoundException,
-    BadRequestException
-} from '@nestjs/common';
-
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-
 import { Budget } from './entities/budget-entity.js';
+import { Users } from '../users/entities/users-entity.js';
+import { Category } from '../categories/entities/category-entity.js';
 import { CreateBudgetDto } from './dto/create-budget.dto.js';
 import { UpdateBudgetDto } from './dto/update-budget.dto.js';
 
 @Injectable()
 export class BudgetsService {
-    constructor(
-        @InjectRepository(Budget)
-        private readonly budgetRepository: Repository<Budget>
-    ) {}
+  constructor(
+    @InjectRepository(Budget)
+    private readonly budgetRepository: Repository<Budget>,
+    @InjectRepository(Users)
+    private readonly userRepository: Repository<Users>,
+    @InjectRepository(Category)
+    private readonly categoryRepository: Repository<Category>,
+  ) {}
 
-    // Mencari semua data budget
-    async findAll(): Promise<Budget[]> {
-        return await this.budgetRepository.find({
-            relations: {
-                user: true,
-                category: true
-            },
-            order: { createdAt: 'DESC' }
-        });
+  // Mencari semua data budget
+  async findAll(): Promise<Budget[]> {
+    return await this.budgetRepository.find({
+      relations: { user: true, category: true },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  // Mencari budget berdasarkan ID
+  async findOne(id: string): Promise<Budget> {
+    const budget = await this.budgetRepository.findOne({
+      where: { id },
+      relations: { user: true, category: true },
+    });
+
+    if (!budget) {
+      throw new NotFoundException(`Budget ${id} tidak ditemukan`);
+    }
+    return budget;
+  }
+
+  // Membuat data budget baru
+  async create(dto: CreateBudgetDto): Promise<Budget> {
+    if (dto.amount <= 0) {
+      throw new BadRequestException('Jumlah budget harus lebih dari 0');
+    }
+    if (dto.endDate < dto.startDate) {
+      throw new BadRequestException('Tanggal selesai tidak boleh sebelum tanggal mulai');
     }
 
-    // Membuat data budget baru
-    async create(budget: CreateBudgetDto): Promise<Budget> {
+    const user = await this.userRepository.findOneBy({ id: dto.userId });
+    if (!user) throw new NotFoundException('User tidak ditemukan');
 
-        if (budget.amount <= 0) {
-            throw new BadRequestException(
-                'Jumlah budget harus lebih dari 0'
-            );
-        }
+    const category = await this.categoryRepository.findOneBy({ id: dto.categoryId });
+    if (!category) throw new NotFoundException('Kategori tidak ditemukan');
 
-        if (budget.endDate < budget.startDate) {
-            throw new BadRequestException(
-                'Tanggal selesai tidak boleh sebelum tanggal mulai'
-            );
-        }
-
-        const newBudget = this.budgetRepository.create({
-            user: { id: budget.userId },
-            category: { id: budget.categoryId },
-            amount: budget.amount,
-            startDate: budget.startDate,
-            endDate: budget.endDate
-        });
-
-        return await this.budgetRepository.save(newBudget);
+    if (category.type !== 'expense') {
+      throw new BadRequestException('Budget hanya untuk kategori pengeluaran');
     }
 
-    // Mencari budget berdasarkan ID
-    async findOne(id: string): Promise<Budget> {
-        const budget = await this.budgetRepository.findOne({
-            where: { id },
-            relations: {
-                user: true,
-                category: true
-            }
-        });
+    const newBudget = this.budgetRepository.create({
+      user,
+      category,
+      amount: dto.amount,
+      startDate: dto.startDate,
+      endDate: dto.endDate,
+    });
 
-        if (!budget) {
-            throw new NotFoundException(
-                `Budget ${id} tidak ditemukan`
-            );
-        }
+    return await this.budgetRepository.save(newBudget);
+  }
 
-        return budget;
+  // Mengubah data budget berdasarkan ID
+  async update(id: string, dto: UpdateBudgetDto): Promise<Budget> {
+    const budget = await this.findOne(id);
+
+    if (dto.userId) {
+      const user = await this.userRepository.findOneBy({ id: dto.userId });
+      if (!user) throw new NotFoundException('User tidak ditemukan');
+      budget.user = user;
     }
 
-    // Mengubah data budget berdasarkan ID
-    async update(
-        id: string,
-        updateBudget: UpdateBudgetDto
-    ): Promise<Budget> {
-
-        const budget = await this.findOne(id);
-
-        const updatedBudget = this.budgetRepository.merge(
-            budget,
-            updateBudget
-        );
-
-        if (updateBudget.userId) {
-            updatedBudget.user = {
-                id: updateBudget.userId
-            } as any;
-        }
-
-        if (updateBudget.categoryId) {
-            updatedBudget.category = {
-                id: updateBudget.categoryId
-            } as any;
-        }
-
-        if (updatedBudget.amount <= 0) {
-            throw new BadRequestException(
-                'Jumlah budget harus lebih dari 0'
-            );
-        }
-
-        if (updatedBudget.endDate < updatedBudget.startDate) {
-            throw new BadRequestException(
-                'Tanggal selesai tidak boleh sebelum tanggal mulai'
-            );
-        }
-
-        return await this.budgetRepository.save(updatedBudget);
+    if (dto.categoryId) {
+      const category = await this.categoryRepository.findOneBy({ id: dto.categoryId });
+      if (!category) throw new NotFoundException('Kategori tidak ditemukan');
+      budget.category = category;
     }
 
-    // Menghapus data budget berdasarkan ID
-    async remove(
-        id: string
-    ): Promise<{ message: string; deleteId: string }> {
-
-        await this.findOne(id);
-
-        await this.budgetRepository.delete(id);
-
-        return {
-            message: `Budget ${id} berhasil dihapus`,
-            deleteId: id
-        };
+    if (budget.category.type !== 'outcome') {
+      throw new BadRequestException('Budget hanya untuk kategori pengeluaran');
     }
 
-    // Menampilkan ringkasan dan realisasi anggaran
-    async getSummary(id: string) {
+    if (dto.amount !== undefined) budget.amount = dto.amount;
+    if (dto.startDate !== undefined) budget.startDate = dto.startDate;
+    if (dto.endDate !== undefined) budget.endDate = dto.endDate;
 
-        const budget = await this.findOne(id);
-
-        const result = await this.budgetRepository
-            .createQueryBuilder('budget')
-            .leftJoin(
-                'transactions',
-                'transaction',
-                `transaction.category_id = budget.category_id
-                AND transaction.transaction_date BETWEEN budget.start_date AND budget.end_date
-                AND transaction.type = :type`,
-                { type: 'expense' }
-            )
-            .leftJoin(
-                'accounts',
-                'account',
-                'account.id = transaction.account_id'
-            )
-            .select(
-                'COALESCE(SUM(transaction.amount), 0)',
-                'realization'
-            )
-            .where('budget.id = :id', { id })
-            .andWhere('account.user_id = budget.user_id')
-            .getRawOne();
-
-        const totalBudget = Number(budget.amount);
-        const realization = Number(result.realization);
-
-        return {
-            budgetId: budget.id,
-            userId: budget.user.id,
-            category: budget.category.name,
-            totalBudget,
-            realization,
-            remaining: totalBudget - realization,
-            percentage: totalBudget > 0
-                ? Number(
-                    ((realization / totalBudget) * 100).toFixed(2)
-                )
-                : 0,
-            startDate: budget.startDate,
-            endDate: budget.endDate
-        };
+    if (budget.amount <= 0) {
+      throw new BadRequestException('Jumlah budget harus lebih dari 0');
     }
+    if (budget.endDate < budget.startDate) {
+      throw new BadRequestException('Tanggal selesai tidak boleh sebelum tanggal mulai');
+    }
+
+    return await this.budgetRepository.save(budget);
+  }
+
+  // Menghapus data budget (soft delete)
+  async remove(id: string): Promise<{ message: string; deletedId: string }> {
+    await this.findOne(id);
+    await this.budgetRepository.softDelete(id);
+
+    return { message: `Budget ${id} berhasil dihapus`, deletedId: id };
+  }
+
+  // Ringkasan dan realisasi anggaran
+  async getSummary(id: string) {
+    const budget = await this.findOne(id);
+
+    const result = await this.budgetRepository
+      .createQueryBuilder('budget')
+      .leftJoin('accounts', 'account', 'account.user_id = budget.user_id')
+      .leftJoin(
+        'transactions',
+        'transaction',
+        `transaction.account_id = account.id
+        AND transaction.category_id = budget.category_id
+        AND transaction.type = :type
+        AND transaction.deleted_at IS NULL
+        AND transaction.transaction_date BETWEEN budget.start_date AND budget.end_date`,
+        { type: 'expense' },
+      )
+      .select('COALESCE(SUM(transaction.amount), 0)', 'realization')
+      .where('budget.id = :id', { id })
+      .getRawOne();
+
+    const totalBudget = Number(budget.amount);
+    const realization = Number(result?.realization ?? 0);
+
+    return {
+      budgetId: budget.id,
+      userId: budget.user.id,
+      category: budget.category.name,
+      totalBudget,
+      realization,
+      remaining: totalBudget - realization,
+      percentage: totalBudget > 0 ? Number(((realization / totalBudget) * 100).toFixed(2)) : 0,
+      startDate: budget.startDate,
+      endDate: budget.endDate,
+    };
+  }
 }
