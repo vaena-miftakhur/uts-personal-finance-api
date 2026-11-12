@@ -5,7 +5,7 @@ import { Budget } from './entities/budget-entity.js';
 import { Users } from '../users/entities/users-entity.js';
 import { Category } from '../categories/entities/category-entity.js';
 import { CreateBudgetDto } from './dto/create-budget.dto.js';
-import { UpdateBudgetDto } from './dto/update-budget.dto.js';
+
 
 @Injectable()
 export class BudgetsService {
@@ -54,7 +54,7 @@ export class BudgetsService {
     const category = await this.categoryRepository.findOneBy({ id: dto.categoryId });
     if (!category) throw new NotFoundException('Kategori tidak ditemukan');
 
-    if (category.type !== 'expense') {
+    if (category.type !== 'outcome') {
       throw new BadRequestException('Budget hanya untuk kategori pengeluaran');
     }
 
@@ -70,38 +70,33 @@ export class BudgetsService {
   }
 
   // Mengubah data budget berdasarkan ID
-  async update(id: string, dto: UpdateBudgetDto): Promise<Budget> {
-    const budget = await this.findOne(id);
+async update(id: string, dto: CreateBudgetDto): Promise<Budget> {
+  const budget = await this.findOne(id);
 
-    if (dto.userId) {
-      const user = await this.userRepository.findOneBy({ id: dto.userId });
-      if (!user) throw new NotFoundException('User tidak ditemukan');
-      budget.user = user;
-    }
+  const user = await this.userRepository.findOneBy({ id: dto.userId });
+  if (!user) throw new NotFoundException('User tidak ditemukan');
 
-    if (dto.categoryId) {
-      const category = await this.categoryRepository.findOneBy({ id: dto.categoryId });
-      if (!category) throw new NotFoundException('Kategori tidak ditemukan');
-      budget.category = category;
-    }
+  const category = await this.categoryRepository.findOneBy({ id: dto.categoryId });
+  if (!category) throw new NotFoundException('Kategori tidak ditemukan');
 
-    if (budget.category.type !== 'outcome') {
-      throw new BadRequestException('Budget hanya untuk kategori pengeluaran');
-    }
-
-    if (dto.amount !== undefined) budget.amount = dto.amount;
-    if (dto.startDate !== undefined) budget.startDate = dto.startDate;
-    if (dto.endDate !== undefined) budget.endDate = dto.endDate;
-
-    if (budget.amount <= 0) {
-      throw new BadRequestException('Jumlah budget harus lebih dari 0');
-    }
-    if (budget.endDate < budget.startDate) {
-      throw new BadRequestException('Tanggal selesai tidak boleh sebelum tanggal mulai');
-    }
-
-    return await this.budgetRepository.save(budget);
+  if (category.type !== 'outcome') {
+    throw new BadRequestException('Budget hanya untuk kategori pengeluaran');
   }
+  if (Number(dto.amount) <= 0) {
+    throw new BadRequestException('Jumlah budget harus lebih dari 0');
+  }
+  if (new Date(dto.endDate) < new Date(dto.startDate)) {
+    throw new BadRequestException('Tanggal selesai tidak boleh sebelum tanggal mulai');
+  }
+
+  budget.user = user;
+  budget.category = category;
+  budget.amount = dto.amount;
+  budget.startDate = dto.startDate;
+  budget.endDate = dto.endDate;
+
+  return await this.budgetRepository.save(budget);
+}
 
   // Menghapus data budget (soft delete)
   async remove(id: string): Promise<{ message: string; deletedId: string }> {
@@ -126,7 +121,7 @@ export class BudgetsService {
         AND transaction.type = :type
         AND transaction.deleted_at IS NULL
         AND transaction.transaction_date BETWEEN budget.start_date AND budget.end_date`,
-        { type: 'expense' },
+        { type: 'outcome' },
       )
       .select('COALESCE(SUM(transaction.amount), 0)', 'realization')
       .where('budget.id = :id', { id })
