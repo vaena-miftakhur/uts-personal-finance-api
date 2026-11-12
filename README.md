@@ -1,6 +1,8 @@
 # Personal Finance Tracker API
 
-Backend pengelolaan keuangan pribadi (NestJS + TypeORM + PostgreSQL).
+Backend pengelolaan keuangan pribadi (NestJS + TypeORM + PostgreSQL) dengan 5 entitas: Users, Accounts, Categories, Transactions, Budgets.
+
+Dokumentasi endpoint: [API-SPEC.md](./API-SPEC.md)
 
 ## Prasyarat
 
@@ -18,8 +20,6 @@ npm install
 
 ## 2. Konfigurasi Environment
 
-Salin `.env.example` menjadi `.env`, lalu isi nilainya:
-
 ```
 copy .env.example .env
 ```
@@ -27,6 +27,9 @@ copy .env.example .env
 Isi `.env`:
 
 ```
+PORT=3000
+NODE_ENV=development
+
 DB_HOST=localhost
 DB_PORT=5433
 DB_USERNAME=postgres
@@ -43,26 +46,13 @@ docker compose up -d
 docker ps
 ```
 
-Container PostgreSQL berjalan di port `5433` (host) dan database `personal_finance_db` dibuat otomatis.
+PostgreSQL berjalan di port `5433` dan database `personal_finance_db` dibuat otomatis.
 
-## 4. Migrasi Database
+## 4. Pembuatan Tabel Database
 
-Generate migration dari entity, lalu jalankan:
+Tabel dibuat otomatis oleh TypeORM saat aplikasi dijalankan pertama kali (`synchronize: true` di `app.module.ts`), jadi tidak perlu menjalankan migration manual.
 
-```
-npm run build
-npx typeorm migration:generate -d dist/data-source.js src/migrations/InitSchema
-npm run build
-npx typeorm migration:run -d dist/data-source.js
-```
-
-Batalkan migration terakhir (jika perlu):
-
-```
-npx typeorm migration:revert -d dist/data-source.js
-```
-
-Cek tabel di HeidiSQL/DBeaver (host `localhost`, port `5433`): `users`, `accounts`, `categories`, `transactions`, `budgets`.
+Setelah aplikasi berjalan, cek tabel `users`, `accounts`, `categories`, `transactions`, dan `budgets` di DBeaver/HeidiSQL (host `localhost`, port `5433`).
 
 ## 5. Menjalankan Aplikasi
 
@@ -72,44 +62,60 @@ npm run start:dev
 
 Aplikasi berjalan di `http://localhost:3000`.
 
-Mode produksi:
-
 ```
 npm run build
 npm run start:prod
 ```
 
-## Struktur Relasi
+## Desain Database
 
-| Parent | Child | Relasi |
-|---|---|---|
-| users | accounts | One-to-Many |
-| users | budgets | One-to-Many |
-| accounts | transactions | One-to-Many |
-| categories | transactions | One-to-Many |
-| categories | budgets | One-to-Many |
+### Relasi
 
-## Aturan Bisnis
+| Parent | Child | Relasi | Foreign key |
+|---|---|---|---|
+| users | accounts | One-to-Many | user_id |
+| users | budgets | One-to-Many | user_id |
+| accounts | transactions | One-to-Many | account_id |
+| categories | transactions | One-to-Many | category_id |
+| categories | budgets | One-to-Many | category_id |
 
-- Transaksi dicatat di satu tabel `transactions` dengan `type` = `income` / `outcome`, `amount` selalu positif.
-- Realisasi anggaran dihitung dari transaksi `outcome` dengan kategori yang sama dan tanggal di dalam periode budget.
-- Sisa anggaran = `budgets.amount` dikurangi realisasi.
+### Aturan Bisnis
 
-### POST /users
-Membuat user baru.
+- Transaksi dicatat di satu tabel `transactions`. Jenis ditentukan kolom `type`: `income` (pemasukan) atau `outcome` (pengeluaran). `amount` selalu positif.
+- `type` transaksi harus sama dengan `type` kategorinya.
+- Budget hanya boleh untuk kategori `outcome`, dengan `end_date` tidak sebelum `start_date`.
+- Realisasi anggaran tidak disimpan, tetapi dihitung dari transaksi:
 
-**Request body**
-```json
-{ "name": "Vina", "email": "vina@gmail.com", "password": "123456" }
+```
+realisasi = SUM(transactions.amount)
+            WHERE type = 'outcome'
+            AND category_id = budget.category_id
+            AND transaction_date BETWEEN budget.start_date AND budget.end_date
+            AND akun milik user yang sama dengan budget.user_id
+
+sisa = budget.amount - realisasi
 ```
 
-**Response 201**
-```json
-{ "id": "uuid", "name": "Vina", "email": "vina@gmail.com" }
-```
+- Penghapusan memakai soft delete (kolom `deleted_at`).
 
-| Status | Keterangan |
+## Pembagian Tugas
+
+| Anggota | Entity |
 |---|---|
-| 201 | User berhasil dibuat |
-| 400 | Validasi gagal (field kosong, email tidak valid) |
-| 409 | Email sudah terdaftar |
+| Vaena | users, accounts |
+| Nissa | categories |
+| Naela | transactions |
+| Nares | budgets |
+
+## Alur Git
+
+```
+git checkout main
+git pull origin main
+git checkout -b nama-fitur
+git add .
+git commit -m "pesan"
+git push -u origin nama-fitur
+```
+
+Gabungkan lewat Pull Request. Jangan commit `.env`.
